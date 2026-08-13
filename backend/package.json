@@ -1,11 +1,14 @@
 {
   "name": "bakeflow-erp",
   "version": "2.0.0",
-  "description": "BakeFlow — End-to-End Bakery ERP",
+  "description": "BakeFlow ERP — Production-ready multi-tenant bakery management platform",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "build": "npx prisma generate",
+    "prisma:push": "npx prisma db push",
+    "prisma:studio": "npx prisma studio"
   },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",

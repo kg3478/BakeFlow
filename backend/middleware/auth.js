@@ -2,8 +2,6 @@ const jwt = require('jsonwebtoken');
 const db = require('../sheets/sheetsClient');
 
 module.exports = async (req, res, next) => {
-  // Allow bypassing auth on paths like healthcheck or public config if needed,
-  // but let's enforce it on API endpoints in server.js or explicitly per route.
   const authHeader = req.headers['authorization'];
   if (!authHeader) {
     return res.status(401).json({ success: false, error: 'Authorization header required' });
@@ -16,7 +14,11 @@ module.exports = async (req, res, next) => {
 
   const token = parts[1];
   try {
-    const secret = process.env.JWT_SECRET || 'super-secure-bakeflow-default-secret-key-999';
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      console.error('[Auth Middleware] JWT_SECRET is not set in environment variables!');
+      return res.status(500).json({ success: false, error: 'Server configuration error' });
+    }
     const decoded = jwt.verify(token, secret);
 
     // Verify tenant status for ERP routes (exclude platform admin API routes)

@@ -1,6 +1,7 @@
 {
   "version": 2,
   "cleanUrls": true,
+  "comment": "BakeFlow is primarily deployed as a single Render service (backend + frontend together). This vercel.json is provided only if you want to deploy the frontend separately to Vercel while pointing API calls to your Render backend. Set VITE_API_URL or update the routes below with your actual Render URL.",
   "routes": [
     {
       "src": "/css/(.*)",
@@ -12,7 +13,7 @@
     },
     {
       "src": "/api/(.*)",
-      "dest": "https://blissoven-calculator.onrender.com/api/$1"
+      "dest": "https://YOUR_RENDER_APP.onrender.com/api/$1"
     },
     {
       "src": "/(.*)",

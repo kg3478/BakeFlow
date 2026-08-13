@@ -10,7 +10,8 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || '');
 
 // Helper to issue JWT
 function generateToken(payload) {
-  const secret = process.env.JWT_SECRET || 'super-secure-bakeflow-default-secret-key-999';
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error('JWT_SECRET environment variable is not set');
   const expiry = process.env.JWT_EXPIRY || '7d';
   return jwt.sign(payload, secret, { expiresIn: expiry });
 }
@@ -97,7 +98,10 @@ router.post('/google', async (req, res) => {
 
     // Check platform admin password first (if they are a platform admin)
     if (isPlatformAdmin) {
-      const adminPass = process.env.ADMIN_PASSWORD || 'admin123';
+      const adminPass = process.env.ADMIN_PASSWORD;
+      if (!adminPass) {
+        return res.status(500).json({ success: false, error: 'ADMIN_PASSWORD is not configured on the server' });
+      }
       let matchesAdmin = false;
       if (adminPass.startsWith('$2a$') || adminPass.startsWith('$2b$')) {
         matchesAdmin = await bcrypt.compare(password, adminPass);
@@ -118,15 +122,17 @@ router.post('/google', async (req, res) => {
           role = 'owner';
         }
       } else {
-        // Fallback: If no password is set in DB yet, check against ADMIN_PASSWORD env variable to claim owner account
-        const adminPass = process.env.ADMIN_PASSWORD || 'admin123';
-        if (adminPass.startsWith('$2a$') || adminPass.startsWith('$2b$')) {
-          isMatch = await bcrypt.compare(password, adminPass);
-        } else {
-          isMatch = (password === adminPass);
-        }
-        if (isMatch) {
-          role = 'owner';
+        // Fallback: If no password is set in DB yet, allow the ADMIN_PASSWORD to claim owner account
+        const adminPass = process.env.ADMIN_PASSWORD;
+        if (adminPass) {
+          if (adminPass.startsWith('$2a$') || adminPass.startsWith('$2b$')) {
+            isMatch = await bcrypt.compare(password, adminPass);
+          } else {
+            isMatch = (password === adminPass);
+          }
+          if (isMatch) {
+            role = 'owner';
+          }
         }
       }
     }

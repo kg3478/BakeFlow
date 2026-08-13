@@ -155,7 +155,7 @@ Make sure `.env` is in `.gitignore` ✅ (it already is — never commit secrets)
 | Setting | Value |
 |---|---|
 | **Root Directory** | `backend` |
-| **Build Command** | `npm install && npx prisma generate` |
+| **Build Command** | `npm install && npm run build` |
 | **Start Command** | `node server.js` |
 | **Environment** | Node |
 
@@ -172,6 +172,8 @@ In [Google Cloud Console](https://console.cloud.google.com) → your OAuth clien
 - The first boot seeds default data and all tables are ready immediately.
 
 > The frontend is served as static files by Express — **no separate frontend deployment needed**.
+
+> 📋 See [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md) for a complete step-by-step checklist including Google OAuth setup, environment variable reference, first-deploy verification, and troubleshooting.
 
 ---
 
@@ -274,6 +276,7 @@ BakeFlow/
 │       ├── api.js                # Axios/fetch API client helpers with auth headers
 │       └── widget.js             # Embeddable product catalog widget for external websites
 │
+├── DEPLOYMENT_CHECKLIST.md       # Step-by-step Render deployment guide + troubleshooting
 ├── DATABASE_SETUP.md             # Step-by-step Neon PostgreSQL setup guide
 ├── .gitignore                    # Excludes .env, node_modules, credentials, personal files
 └── README.md                     # This file
