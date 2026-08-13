@@ -27,3 +27,12 @@ logs/
 demo_backup_index.html
 *.backup.*
 /tmp
+
+# ── Scratch/personal images ─────────────────────────────────────
+WhatsApp\ Image*
+*.jpeg
+*.jpg
+*.png
+!frontend/**/*.png
+!frontend/**/*.jpg
+!frontend/**/*.jpeg

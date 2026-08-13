@@ -27,7 +27,7 @@ router.post('/scan', enforceQuota, async (req, res) => {
     if (!process.env.GEMINI_API_KEY) return res.status(400).json({ error: 'GEMINI_API_KEY not configured' });
 
     const apiKey = process.env.GEMINI_API_KEY;
-    const model = 'gemini-3.5-flash';
+    const model = 'gemini-1.5-flash';
     const endpoint = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${apiKey}`;
 
     const prompt = `This is a purchase invoice for a bakery/food business.
