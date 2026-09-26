@@ -67,28 +67,34 @@ router.post('/scan', enforceQuota, async (req, res) => {
       candidateModels.push(process.env.GEMINI_MODEL.trim().replace(/^models\//, ''));
     }
 
-    if (discovered.length > 0) {
-      // Prioritize flash models, then any discovered models
-      const flash = discovered.filter(m => m.includes('flash'));
-      const others = discovered.filter(m => !m.includes('flash'));
-      for (const m of [...flash, ...others]) {
-        if (!candidateModels.includes(m)) candidateModels.push(m);
-      }
+    // Top verified multimodal models currently active in Google Generative AI
+    const verifiedWorkingModels = [
+      'gemini-flash-latest',
+      'gemini-3.8-flash',
+      'gemini-3.5-flash',
+      'gemini-2.5-flash-image',
+      'gemini-3.1-flash-image',
+      'gemini-pro-latest'
+    ];
+    for (const m of verifiedWorkingModels) {
+      if (!candidateModels.includes(m)) candidateModels.push(m);
     }
 
-    // Default fallbacks in priority order
-    const defaults = [
-      'gemini-1.5-flash',
-      'gemini-1.5-flash-latest',
-      'gemini-2.0-flash',
-      'gemini-2.5-flash',
-      'gemini-1.5-flash-001',
-      'gemini-1.5-flash-002',
-      'gemini-1.5-pro',
-      'gemini-1.5-pro-latest'
-    ];
-    for (const d of defaults) {
-      if (!candidateModels.includes(d)) candidateModels.push(d);
+    if (discovered.length > 0) {
+      // Exclude audio/TTS/non-vision models
+      const validDiscovered = discovered.filter(m => {
+        const lower = m.toLowerCase();
+        return !lower.includes('tts') &&
+               !lower.includes('transcribe') &&
+               !lower.includes('clip') &&
+               !lower.includes('lyria') &&
+               !lower.includes('robotics') &&
+               !lower.includes('gemma') &&
+               !lower.includes('computer-use');
+      });
+      for (const m of validDiscovered) {
+        if (!candidateModels.includes(m)) candidateModels.push(m);
+      }
     }
 
     const prompt = `This is a purchase invoice for a bakery/food business.
@@ -135,9 +141,9 @@ Return ONLY the JSON array with no explanation, no markdown, no extra text.`;
             cleanMessage = errText || cleanMessage;
           }
 
-          // If 404 (model not found on this version/tier), attempt next fallback model
-          if (response.status === 404) {
-            console.warn(`[invoice scan] Model '${model}' returned 404: ${cleanMessage}. Trying next model...`);
+          // If model is retired (404), deprecated, or modality not supported (400), try next candidate
+          if (response.status === 404 || cleanMessage.includes('modality') || cleanMessage.includes('no longer available')) {
+            console.warn(`[invoice scan] Model '${model}' skipped: ${cleanMessage}. Trying next model...`);
             lastError = new Error(cleanMessage);
             continue;
           }
