@@ -112,6 +112,52 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
+// ── Gemini AI Status / Diagnostic Endpoint ───────────────────
+app.get('/api/gemini-status', async (req, res) => {
+  const rawKey = process.env.GEMINI_API_KEY;
+  if (!rawKey) {
+    return res.status(400).json({
+      configured: false,
+      error: 'GEMINI_API_KEY environment variable is not set on the server.'
+    });
+  }
+
+  const apiKey = rawKey.trim().replace(/^["']|["']$/g, '');
+  const maskedKey = apiKey.slice(0, 6) + '...' + apiKey.slice(-4);
+
+  try {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`, {
+      headers: { 'x-goog-api-key': apiKey }
+    });
+    const data = await r.json();
+
+    if (!r.ok) {
+      return res.status(r.status).json({
+        configured: true,
+        maskedKey,
+        keyLength: apiKey.length,
+        error: data.error?.message || `Google API error [${r.status}]`,
+        details: data
+      });
+    }
+
+    const generateContentModels = (data.models || [])
+      .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
+      .map(m => m.name.replace(/^models\//, ''));
+
+    res.json({
+      configured: true,
+      maskedKey,
+      keyLength: apiKey.length,
+      activeModel: process.env.GEMINI_MODEL || generateContentModels[0] || 'gemini-1.5-flash',
+      totalAvailableModels: (data.models || []).length,
+      generateContentModels
+    });
+  } catch (err) {
+    res.status(500).json({ configured: true, maskedKey, error: err.message });
+  }
+});
+
 // ── Apply JWT auth globally to all secure /api endpoints ─────
 const requireAuth      = require('./middleware/auth');
 const { tenantMiddleware } = require('./middleware/tenantContext');

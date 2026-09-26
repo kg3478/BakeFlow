@@ -2,12 +2,37 @@ const express = require('express');
 const router = express.Router();
 const db = require('../sheets/sheetsClient');
 
+// Helper: Query Google API to get models authorized for this key
+async function getAvailableModels(apiKey) {
+  try {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`, {
+      headers: { 'x-goog-api-key': apiKey }
+    });
+    if (!r.ok) {
+      const errText = await r.text();
+      console.warn(`[invoice] ListModels error [${r.status}]:`, errText);
+      return [];
+    }
+    const data = await r.json();
+    return (data.models || [])
+      .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
+      .map(m => m.name.replace(/^models\//, ''));
+  } catch (e) {
+    console.warn('[invoice] Failed to fetch available models:', e.message);
+    return [];
+  }
+}
+
 // GET /api/invoice/models - list available Gemini models (debug)
 router.get('/models', async (req, res) => {
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) return res.status(400).json({ error: 'GEMINI_API_KEY not set' });
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?pageSize=50&key=${apiKey}`);
+    const rawKey = process.env.GEMINI_API_KEY;
+    if (!rawKey) return res.status(400).json({ error: 'GEMINI_API_KEY not set' });
+    const apiKey = rawKey.trim().replace(/^["']|["']$/g, '');
+
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?pageSize=50&key=${apiKey}`, {
+      headers: { 'x-goog-api-key': apiKey }
+    });
     const data = await r.json();
     if (!r.ok) {
       return res.status(r.status).json({
@@ -25,19 +50,46 @@ router.get('/models', async (req, res) => {
 const enforceQuota = require('../middleware/quotaEnforcer');
 
 // POST /api/invoice/scan - scan supplier invoice with Gemini Vision
-// Uses v1beta REST API with fallback models for maximum reliability
+// Uses v1beta REST API with dynamic model discovery and fallback
 router.post('/scan', enforceQuota, async (req, res) => {
   try {
     const { image, mimeType } = req.body;
     if (!image) return res.status(400).json({ error: 'No image provided' });
     if (!process.env.GEMINI_API_KEY) return res.status(400).json({ error: 'GEMINI_API_KEY not configured' });
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY.trim().replace(/^["']|["']$/g, '');
 
-    // Ordered candidate models (custom env var or best vision models)
-    const candidateModels = process.env.GEMINI_MODEL
-      ? [process.env.GEMINI_MODEL]
-      : ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash-latest', 'gemini-2.5-flash', 'gemini-1.5-pro'];
+    // Discover models authorized for this key
+    const discovered = await getAvailableModels(apiKey);
+    let candidateModels = [];
+
+    if (process.env.GEMINI_MODEL) {
+      candidateModels.push(process.env.GEMINI_MODEL.trim().replace(/^models\//, ''));
+    }
+
+    if (discovered.length > 0) {
+      // Prioritize flash models, then any discovered models
+      const flash = discovered.filter(m => m.includes('flash'));
+      const others = discovered.filter(m => !m.includes('flash'));
+      for (const m of [...flash, ...others]) {
+        if (!candidateModels.includes(m)) candidateModels.push(m);
+      }
+    }
+
+    // Default fallbacks in priority order
+    const defaults = [
+      'gemini-1.5-flash',
+      'gemini-1.5-flash-latest',
+      'gemini-2.0-flash',
+      'gemini-2.5-flash',
+      'gemini-1.5-flash-001',
+      'gemini-1.5-flash-002',
+      'gemini-1.5-pro',
+      'gemini-1.5-pro-latest'
+    ];
+    for (const d of defaults) {
+      if (!candidateModels.includes(d)) candidateModels.push(d);
+    }
 
     const prompt = `This is a purchase invoice for a bakery/food business.
 Extract ALL line items and return ONLY a valid JSON array.
@@ -64,7 +116,10 @@ Return ONLY the JSON array with no explanation, no markdown, no extra text.`;
       try {
         const response = await fetch(endpoint, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': apiKey
+          },
           body: JSON.stringify(body)
         });
 
