@@ -32,7 +32,13 @@ const API = {
         window.location.reload();
       }
       const msg = await res.text();
-      throw new Error(msg || `HTTP ${res.status}`);
+      let errorText = msg;
+      try {
+        const parsed = JSON.parse(msg);
+        if (parsed.error) errorText = parsed.error;
+        else if (parsed.message) errorText = parsed.message;
+      } catch (_) {}
+      throw new Error(errorText || `HTTP ${res.status}`);
     }
     return res.json();
 
