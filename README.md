@@ -166,10 +166,50 @@ BakeFlow/
 │       ├── app.js             # All ERP module logic (~4,000 lines)
 │       ├── api.js             # API client helpers
 │       └── widget.js          # Embeddable product catalog widget
+├── docs/                      # Comprehensive technical documentation & system diagrams
+│   ├── 01_project_overview.md
+│   ├── 02_architecture_and_tech_stack.md
+│   ├── 03_er_diagram.md
+│   ├── 04_block_diagram.md
+│   ├── 05_api_reference.md
+│   ├── 06_security_design.md
+│   ├── 07_data_flow_diagrams.md
+│   ├── 08_roles_and_permissions.md
+│   ├── 09_deployment_guide.md
+│   ├── 10_module_specifications.md
+│   ├── 11_file_structure.md
+│   ├── 12_testing_and_quality.md
+│   ├── 13_user_journey.md
+│   ├── images/                # High-resolution architectural & flow diagram graphics
+│   └── README.md              # Documentation index and visual gallery
 ├── DEPLOYMENT_CHECKLIST.md
 ├── DATABASE_SETUP.md
 └── README.md
 ```
+
+---
+
+## Comprehensive Documentation Suite
+
+Full technical specifications, diagrams, and operational guides are documented in the [`docs/`](./docs/README.md) directory:
+
+| Document | Topic | Description |
+|---|---|---|
+| [**01. Overview**](./docs/01_project_overview.md) | System Overview | Goals, target personas, business modules, pricing tiers |
+| [**02. Architecture**](./docs/02_architecture_and_tech_stack.md) | Technical Stack | Layered architecture, multi-tenancy model, security layers |
+| [**03. ER Diagram**](./docs/03_er_diagram.md) | Database Design | 13 PostgreSQL tables, constraints, schema visuals |
+| [**04. Block Diagram**](./docs/04_block_diagram.md) | Block Diagram | System block diagram, module blocks, sync/async flows |
+| [**05. API Reference**](./docs/05_api_reference.md) | REST Endpoints | Complete endpoint documentation, query params, payloads |
+| [**06. Security Design**](./docs/06_security_design.md) | Security & Isolation | Tenant scoping, RBAC matrix, rate limits, HMAC signatures |
+| [**07. Data Flow Diagrams**](./docs/07_data_flow_diagrams.md) | Data Flows | DFD Level 0, Level 1, Level 2 for AI scan & POS billing |
+| [**08. Roles & Permissions**](./docs/08_roles_and_permissions.md) | Authorization | Complete 4-role permission grid |
+| [**09. Deployment Guide**](./docs/09_deployment_guide.md) | DevOps & Hosting | Render setup, Neon PostgreSQL, environment variables |
+| [**10. Module Specifications**](./docs/10_module_specifications.md) | Business Modules | Detailed specifications for all 13 ERP modules |
+| [**11. File Structure**](./docs/11_file_structure.md) | Codebase Tree | Exhaustive file-by-file directory reference |
+| [**12. Testing & Quality**](./docs/12_testing_and_quality.md) | Testing & Reliability | Manual checklists, self-healing audits, test scripts |
+| [**13. User Journey**](./docs/13_user_journey.md) | User Journeys | Step-by-step persona workflows for Owner, Baker, & Customer |
+
+Check out the [Documentation Index & Visual Gallery](./docs/README.md) for full details and visual diagrams.
 
 ---
 

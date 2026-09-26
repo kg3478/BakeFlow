@@ -36,3 +36,4 @@ WhatsApp\ Image*
 !frontend/**/*.png
 !frontend/**/*.jpg
 !frontend/**/*.jpeg
+!docs/images/**
