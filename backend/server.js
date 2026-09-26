@@ -135,23 +135,57 @@ app.get('/api/gemini-status', async (req, res) => {
       return res.status(r.status).json({
         configured: true,
         maskedKey,
-        keyLength: apiKey.length,
         error: data.error?.message || `Google API error [${r.status}]`,
         details: data
       });
     }
 
-    const generateContentModels = (data.models || [])
-      .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
-      .map(m => m.name.replace(/^models\//, ''));
+    const testResults = {};
+    const candidatesToTest = [
+      'gemini-2.5-flash',
+      'gemini-flash-latest',
+      'gemini-2.5-flash-image',
+      'gemini-3.5-flash',
+      'gemini-2.0-flash',
+      'gemini-1.5-flash'
+    ];
+
+    // Test each candidate model with a 1x1 GIF to see if image modality is supported
+    const tiny1x1Image = 'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+
+    for (const m of candidatesToTest) {
+      try {
+        const testRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { inlineData: { mimeType: 'image/gif', data: tiny1x1Image } },
+                { text: 'Describe this image in one word.' }
+              ]
+            }]
+          })
+        });
+        const testBody = await testRes.text();
+        let parsed = null;
+        try { parsed = JSON.parse(testBody); } catch (_) {}
+
+        testResults[m] = {
+          status: testRes.status,
+          success: testRes.ok,
+          text: parsed?.candidates?.[0]?.content?.parts?.[0]?.text || undefined,
+          error: parsed?.error?.message || (!testRes.ok ? testBody.slice(0, 150) : undefined)
+        };
+      } catch (e) {
+        testResults[m] = { error: e.message };
+      }
+    }
 
     res.json({
       configured: true,
       maskedKey,
-      keyLength: apiKey.length,
-      activeModel: process.env.GEMINI_MODEL || generateContentModels[0] || 'gemini-1.5-flash',
-      totalAvailableModels: (data.models || []).length,
-      generateContentModels
+      testResults
     });
   } catch (err) {
     res.status(500).json({ configured: true, maskedKey, error: err.message });
