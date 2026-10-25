@@ -395,7 +395,7 @@ router.post('/demo', async (req, res) => {
     await db._resetAndSeedDemoTenant(DEMO_TENANT_ID);
 
     const userPayload = {
-      role: 'demo_admin',
+      role: 'admin',
       name: 'Demo User',
       email: 'demo@bakeflow.app',
       picture: '',

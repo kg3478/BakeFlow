@@ -2401,6 +2401,11 @@ async function initAuth() {
   if (stored) {
     try {
       currentSession = JSON.parse(stored);
+      if (currentSession && (currentSession.email === 'demo@bakeflow.app' || currentSession.role === 'demo_admin' || currentSession.isDemo)) {
+        currentSession.isDemo = true;
+        currentSession.role = 'admin';
+        localStorage.setItem('bakeflow_session', JSON.stringify(currentSession));
+      }
       applySession();
       return;
     } catch(e) { localStorage.removeItem('bakeflow_session'); }
@@ -2738,9 +2743,9 @@ function applySession() {
   if (suName) suName.textContent = currentSession.name + (isDemo ? ' (Demo)' : '');
   const hasAdminPrivileges = currentSession.role === 'admin' || currentSession.role === 'owner' || currentSession.role === 'platform_admin' || currentSession.role === 'demo_admin';
   if (suRole) {
-    if (currentSession.role === 'owner') suRole.textContent = '👑 Owner';
+    if (isDemo || currentSession.role === 'demo_admin') suRole.textContent = '🧁 Demo Mode';
+    else if (currentSession.role === 'owner') suRole.textContent = '👑 Owner';
     else if (currentSession.role === 'admin') suRole.textContent = '🔑 Admin';
-    else if (currentSession.role === 'demo_admin') suRole.textContent = '🧁 Demo Mode';
     else if (currentSession.role === 'platform_admin') suRole.textContent = '🏛️ Platform Admin';
     else suRole.textContent = '👤 Employee';
   }

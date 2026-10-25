@@ -360,10 +360,11 @@ class SheetsClient {
       // Seed sample customers
       const custCount = await this.prisma.customer.count({ where: { tenantId: demoTenantId } });
       if (custCount === 0) {
+        const today = new Date().toLocaleDateString('en-IN');
         const demoCustomers = [
-          { id: 'demo-cust-1', name: 'Priya Sharma', phone: '9876543210', email: 'priya@example.com', address: '12, MG Road, Pune', notes: 'Prefers eggless cakes', totalOrders: 5, totalValue: 4250 },
-          { id: 'demo-cust-2', name: 'Rohan Mehta', phone: '9812345678', email: 'rohan@example.com', address: '45, Linking Road, Mumbai', notes: '', totalOrders: 3, totalValue: 2800 },
-          { id: 'demo-cust-3', name: 'Ananya Gupta', phone: '9998877665', email: 'ananya@example.com', address: '7, Civil Lines, Delhi', notes: 'Allergic to nuts', totalOrders: 8, totalValue: 6900 },
+          { id: 'demo-cust-1', name: 'Priya Sharma', phone: '9876543210', email: 'priya@example.com', city: 'Pune', address: '12, MG Road, Pune', notes: 'Prefers eggless cakes', totalOrders: 5, totalValue: 4250, lastOrderDate: today, createdAt: today },
+          { id: 'demo-cust-2', name: 'Rohan Mehta', phone: '9812345678', email: 'rohan@example.com', city: 'Mumbai', address: '45, Linking Road, Mumbai', notes: '', totalOrders: 3, totalValue: 2800, lastOrderDate: today, createdAt: today },
+          { id: 'demo-cust-3', name: 'Ananya Gupta', phone: '9998877665', email: 'ananya@example.com', city: 'Delhi', address: '7, Civil Lines, Delhi', notes: 'Allergic to nuts', totalOrders: 8, totalValue: 6900, lastOrderDate: today, createdAt: today },
         ];
         for (const c of demoCustomers) {
           await this.prisma.customer.create({ data: { ...c, tenantId: demoTenantId } });
@@ -377,22 +378,28 @@ class SheetsClient {
         await this.prisma.salesInvoice.create({
           data: {
             id: 'demo-sale-1', tenantId: demoTenantId,
-            invoiceNumber: 9001,
-            customerName: 'Priya Sharma', customerPhone: '9876543210',
+            invoiceNumber: 'INV-9001',
+            customerId: 'demo-cust-1',
+            customerName: 'Priya Sharma', customerPhone: '9876543210', customerCity: 'Pune',
             items: [{ name: 'Rasmalai Cake (1kg)', qty: 1, rate: 950, amount: 950 }, { name: 'Cake Box 1kg', qty: 1, rate: 45, amount: 45 }],
             subtotal: 995, discountAmt: 50, gstPct: 0, gstAmt: 0, totalAmount: 945,
             paymentMethod: 'UPI', notes: 'Anniversary cake', date: today,
+            timestamp: Date.now() - 86400000,
+            createdBy: 'Demo User', createdByEmail: 'demo@bakeflow.app',
             inventoryDeducted: false, whatsappSent: false
           }
         });
         await this.prisma.salesInvoice.create({
           data: {
             id: 'demo-sale-2', tenantId: demoTenantId,
-            invoiceNumber: 9002,
-            customerName: 'Ananya Gupta', customerPhone: '9998877665',
+            invoiceNumber: 'INV-9002',
+            customerId: 'demo-cust-3',
+            customerName: 'Ananya Gupta', customerPhone: '9998877665', customerCity: 'Delhi',
             items: [{ name: 'Fudgy Brownie Box (8pc)', qty: 2, rate: 499, amount: 998 }, { name: 'Message Card', qty: 2, rate: 5, amount: 10 }],
             subtotal: 1008, discountAmt: 0, gstPct: 0, gstAmt: 0, totalAmount: 1008,
             paymentMethod: 'Cash', notes: '', date: today,
+            timestamp: Date.now() - 43200000,
+            createdBy: 'Demo User', createdByEmail: 'demo@bakeflow.app',
             inventoryDeducted: false, whatsappSent: false
           }
         });
