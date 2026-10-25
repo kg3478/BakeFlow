@@ -23,7 +23,8 @@ module.exports = async (req, res, next) => {
 
     // Verify tenant status for ERP routes (exclude platform admin API routes)
     const isApiAdminRoute = req.path.startsWith('/admin') || req.path.startsWith('/api/admin');
-    if (!isApiAdminRoute && decoded.tenantId) {
+    const isDemoSession = decoded.isDemo === true;
+    if (!isApiAdminRoute && !isDemoSession && decoded.tenantId) {
       const tenant = await db.prisma.tenant.findUnique({
         where: { id: decoded.tenantId }
       });

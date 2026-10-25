@@ -2570,6 +2570,39 @@ function backToSignin() {
   document.getElementById('auth-overlay').style.display = 'flex';
 }
 
+// ── Demo Login ───────────────────────────────────────────────
+async function loginDemo() {
+  const btn = document.getElementById('demo-login-btn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span>⏳</span><span>Loading demo…</span>'; }
+  try {
+    const res = await fetch('/api/auth/demo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: 'demo1234' })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Demo login failed');
+
+    const session = {
+      name: data.user.name || 'Demo User',
+      email: data.user.email || 'demo@bakeflow.app',
+      picture: data.user.picture || '',
+      role: data.user.role,
+      userId: data.user.userId || null,
+      loginTime: Date.now(),
+      isDemo: true
+    };
+    localStorage.setItem('bakeflow_token', data.token);
+    localStorage.setItem('bakeflow_session', JSON.stringify(session));
+    currentSession = session;
+    document.getElementById('auth-overlay').style.display = 'none';
+    applySession();
+  } catch (err) {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<span style="font-size:18px;">🧁</span><span>Try Demo — No sign-in needed</span>'; }
+    showToast('Demo login failed: ' + err.message, true);
+  }
+}
+
 async function submitRole() {
   const roleInput = document.querySelector('input[name="role"]:checked');
   if (!roleInput) { showRoleError('Please select a role (Admin or Employee)'); return; }
@@ -2626,19 +2659,37 @@ function applySession() {
   const roleModal = document.getElementById('role-modal');
   if (roleModal) { roleModal.style.display = 'none'; roleModal.classList.add('hidden'); }
 
+  // Demo mode banner
+  const demoBanner = document.getElementById('demo-banner');
+  const isDemo = currentSession && (currentSession.isDemo || currentSession.role === 'demo_admin');
+  if (demoBanner) {
+    if (isDemo) {
+      demoBanner.classList.remove('hidden');
+      demoBanner.style.display = 'flex';
+      // Push main content down to account for banner height
+      document.querySelector('.app') && (document.querySelector('.app').style.paddingTop = '42px');
+    } else {
+      demoBanner.classList.add('hidden');
+      demoBanner.style.display = 'none';
+    }
+  }
+
   // Sidebar user card
   const suName = document.getElementById('su-name');
   const suRole = document.getElementById('su-role');
   const suAvatar = document.getElementById('su-avatar');
-  if (suName) suName.textContent = currentSession.name;
-  const hasAdminPrivileges = currentSession.role === 'admin' || currentSession.role === 'owner' || currentSession.role === 'platform_admin';
+  if (suName) suName.textContent = currentSession.name + (isDemo ? ' (Demo)' : '');
+  const hasAdminPrivileges = currentSession.role === 'admin' || currentSession.role === 'owner' || currentSession.role === 'platform_admin' || currentSession.role === 'demo_admin';
   if (suRole) {
     if (currentSession.role === 'owner') suRole.textContent = '👑 Owner';
     else if (currentSession.role === 'admin') suRole.textContent = '🔑 Admin';
+    else if (currentSession.role === 'demo_admin') suRole.textContent = '🧁 Demo Mode';
     else if (currentSession.role === 'platform_admin') suRole.textContent = '🏛️ Platform Admin';
     else suRole.textContent = '👤 Employee';
   }
-  if (suAvatar && currentSession.picture) {
+  if (isDemo && suAvatar) {
+    suAvatar.innerHTML = '🧁';
+  } else if (suAvatar && currentSession.picture) {
     suAvatar.innerHTML = `<img src="${currentSession.picture}" alt="">`;
   }
 

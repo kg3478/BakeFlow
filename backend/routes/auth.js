@@ -358,6 +358,63 @@ router.get('/employees', async (req, res) => {
   }
 });
 
+// POST /api/auth/demo
+// Issues a demo JWT — no Google sign-in required
+// Password is controlled by DEMO_PASSWORD env var (default: demo1234)
+router.post('/demo', async (req, res) => {
+  const { password } = req.body;
+  const demoPassword = process.env.DEMO_PASSWORD || 'demo1234';
+
+  if (!password || password !== demoPassword) {
+    return res.status(401).json({ success: false, error: 'Invalid demo password' });
+  }
+
+  try {
+    // Use a fixed UUID for the demo tenant (stable across restarts)
+    const DEMO_TENANT_ID = process.env.DEMO_TENANT_ID || 'd0000000-0000-0000-0000-000000000001';
+
+    // Ensure demo tenant exists in DB (idempotent upsert)
+    try {
+      await db.prisma.tenant.upsert({
+        where: { id: DEMO_TENANT_ID },
+        update: {}, // nothing to update if it exists
+        create: {
+          id: DEMO_TENANT_ID,
+          name: 'Demo Bakery',
+          email: 'demo@bakeflow.app',
+          googleId: 'demo-google-id-bakeflow',
+          status: 'active',
+          plan: 'free'
+        }
+      });
+    } catch (dbErr) {
+      // Non-fatal: demo tenant creation may fail in certain DB setups; login still proceeds
+      console.warn('[Demo Login] Could not ensure demo tenant:', dbErr.message);
+    }
+
+    const userPayload = {
+      role: 'demo_admin',
+      name: 'Demo User',
+      email: 'demo@bakeflow.app',
+      picture: '',
+      tenantId: DEMO_TENANT_ID,
+      userId: null,
+      isDemo: true
+    };
+
+    const jwtToken = generateToken(userPayload);
+
+    return res.json({
+      success: true,
+      token: jwtToken,
+      user: userPayload
+    });
+  } catch (err) {
+    console.error('[Demo Login] Error:', err.message);
+    return res.status(500).json({ success: false, error: 'Demo login failed: ' + err.message });
+  }
+});
+
 // GET /api/auth/config
 // Returns public config for frontend (GOOGLE_CLIENT_ID, BUSINESS_NAME)
 router.get('/config', (req, res) => {
