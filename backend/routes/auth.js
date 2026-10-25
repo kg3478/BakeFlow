@@ -387,6 +387,8 @@ router.post('/demo', async (req, res) => {
           plan: 'free'
         }
       });
+      // Seed demo data if not already present (non-blocking)
+      db._seedDemoTenant(DEMO_TENANT_ID).catch(e => console.warn('[Demo] Seed error:', e.message));
     } catch (dbErr) {
       // Non-fatal: demo tenant creation may fail in certain DB setups; login still proceeds
       console.warn('[Demo Login] Could not ensure demo tenant:', dbErr.message);

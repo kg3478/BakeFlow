@@ -182,8 +182,30 @@ class SheetsClient {
       }
     });
 
+    // Ensure demo tenant exists (for Try Demo button)
+    const demoTenantId = process.env.DEMO_TENANT_ID || 'd0000000-0000-0000-0000-000000000001';
+    try {
+      await basePrisma.tenant.upsert({
+        where: { googleId: 'demo-google-id-bakeflow' },
+        update: {},
+        create: {
+          id: demoTenantId,
+          name: 'Demo Bakery',
+          googleId: 'demo-google-id-bakeflow',
+          email: 'demo@bakeflow.app',
+          status: 'active',
+          plan: 'free'
+        }
+      });
+    } catch (e) {
+      console.warn('[Init] Could not create demo tenant:', e.message);
+    }
+
     // Seed defaults if tables are empty
     await this._seedDefaults();
+
+    // Seed demo tenant data (idempotent)
+    await this._seedDemoTenant(demoTenantId);
   }
 
   async _seedDefaults() {
@@ -266,6 +288,78 @@ class SheetsClient {
       await this.prisma.setting.create({
         data: { key: 'overhead', tenantId: this.defaultTenantId, value: DEFAULT_OVERHEAD }
       });
+    }
+  }
+
+  // Seed demo tenant with sample data so the Try Demo experience is rich
+  async _seedDemoTenant(demoTenantId) {
+    try {
+      const ingCount = await this.prisma.ingredient.count({ where: { tenantId: demoTenantId } });
+      if (ingCount === 0) {
+        console.log('  📋 Seeding demo ingredients...');
+        for (const item of DEFAULT_INGREDIENTS) {
+          const history = [{ date: item.updated || new Date().toLocaleDateString('en-IN'), timestamp: Date.now(), oldRate: 0, newRate: item.rate }];
+          await this.prisma.ingredient.create({
+            data: {
+              id: `demo-${item.id}`,
+              tenantId: demoTenantId,
+              name: item.name, cat: item.cat, unit: item.unit,
+              rate: item.rate, updated: item.updated,
+              rateHistory: history, stockQty: item.stockQty || 0, minAlert: item.minAlert || 0
+            }
+          });
+        }
+      }
+
+      const packCount = await this.prisma.packaging.count({ where: { tenantId: demoTenantId } });
+      if (packCount === 0) {
+        console.log('  📦 Seeding demo packaging...');
+        for (const item of DEFAULT_PACKAGING) {
+          const history = [{ date: new Date().toLocaleDateString('en-IN'), timestamp: Date.now(), oldRate: 0, newRate: item.rate }];
+          await this.prisma.packaging.create({
+            data: {
+              id: `demo-${item.id}`,
+              tenantId: demoTenantId,
+              name: item.name, type: item.type, size: item.size,
+              rate: item.rate, vendor: item.vendor,
+              rateHistory: history, stockQty: item.stockQty || 0, minAlert: item.minAlert || 0
+            }
+          });
+        }
+      }
+
+      const prodCount = await this.prisma.product.count({ where: { tenantId: demoTenantId } });
+      if (prodCount === 0) {
+        console.log('  🛒 Seeding demo products...');
+        for (const item of DEFAULT_PRODUCTS) {
+          await this.prisma.product.create({
+            data: {
+              id: `demo-${item.id}`,
+              tenantId: demoTenantId,
+              name: item.name, cat: item.cat, emoji: item.emoji,
+              cost: item.cost, sell: item.sell, margin: item.margin
+            }
+          });
+        }
+      }
+
+      const setHasLabour = await this.prisma.setting.findUnique({
+        where: { key_tenantId: { key: 'labour', tenantId: demoTenantId } }
+      });
+      if (!setHasLabour) {
+        await this.prisma.setting.create({ data: { key: 'labour', tenantId: demoTenantId, value: DEFAULT_LABOUR } });
+      }
+
+      const setHasOverhead = await this.prisma.setting.findUnique({
+        where: { key_tenantId: { key: 'overhead', tenantId: demoTenantId } }
+      });
+      if (!setHasOverhead) {
+        await this.prisma.setting.create({ data: { key: 'overhead', tenantId: demoTenantId, value: DEFAULT_OVERHEAD } });
+      }
+
+      console.log('  ✅ Demo tenant seeded.');
+    } catch (err) {
+      console.warn('[Demo Seed] Failed:', err.message);
     }
   }
 

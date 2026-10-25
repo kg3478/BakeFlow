@@ -158,8 +158,22 @@ async function initApp() {
   } catch (err) {
     console.error('initApp failed:', err);
     hideLoading();
+    const isDemo = currentSession && (currentSession.isDemo || currentSession.role === 'demo_admin');
     if (err.message && (err.message.toLowerCase().includes('suspended') || err.message.toLowerCase().includes('access denied'))) {
       showSuspensionBlock(err.message);
+    } else if (isDemo) {
+      // In demo mode, silently fall back to default empty state — don't scare the user
+      console.warn('[Demo] API load failed, using defaults:', err.message);
+      labourSettings   = labourSettings   || DEFAULT_LABOUR;
+      overheadSettings = overheadSettings || DEFAULT_OVERHEAD;
+      try { renderIngredients(); } catch(e) {}
+      try { renderDecorations(); } catch(e) {}
+      try { renderPackaging(); } catch(e) {}
+      try { renderDashboardTable(); } catch(e) {}
+      try { renderSavedOrdersList(); } catch(e) {}
+      try { recalculate(); } catch(e) {}
+      try { calcDailyOverhead(); } catch(e) {}
+      try { loadDashboardData(); } catch(e) {}
     } else {
       showToast('⚠ Could not connect to server. Is it running?', true);
     }
