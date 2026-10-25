@@ -373,11 +373,11 @@ router.post('/demo', async (req, res) => {
     // Use a fixed UUID for the demo tenant (stable across restarts)
     const DEMO_TENANT_ID = process.env.DEMO_TENANT_ID || 'd0000000-0000-0000-0000-000000000001';
 
-    // Ensure demo tenant exists in DB (idempotent upsert)
+    // Ensure demo tenant exists (idempotent upsert)
     try {
       await db.prisma.tenant.upsert({
         where: { id: DEMO_TENANT_ID },
-        update: {}, // nothing to update if it exists
+        update: {},
         create: {
           id: DEMO_TENANT_ID,
           name: 'Demo Bakery',
@@ -387,12 +387,12 @@ router.post('/demo', async (req, res) => {
           plan: 'free'
         }
       });
-      // Seed demo data if not already present (non-blocking)
-      db._seedDemoTenant(DEMO_TENANT_ID).catch(e => console.warn('[Demo] Seed error:', e.message));
     } catch (dbErr) {
-      // Non-fatal: demo tenant creation may fail in certain DB setups; login still proceeds
       console.warn('[Demo Login] Could not ensure demo tenant:', dbErr.message);
     }
+
+    // Reset + re-seed demo data on every login (awaited so data is ready when JWT is returned)
+    await db._resetAndSeedDemoTenant(DEMO_TENANT_ID);
 
     const userPayload = {
       role: 'demo_admin',

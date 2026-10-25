@@ -332,5 +332,10 @@ body.role-employee .admin-only { display: none !important; }
 }
 
 
-/* ── Spin animation for scan loader ─────────────────────── */
-@keyframes spin { to { transform: rotate(360deg); } }
+/* ── Demo Mode layout adjustments ───────────────────────────── */
+/* Banner is ~38px tall. Shift sidebar + sticky header below it. */
+body.demo-mode .sidebar       { top: 38px !important; height: calc(100vh - 38px) !important; }
+body.demo-mode .page-header   { top: 38px !important; }
+body.demo-mode .main          { padding-top: 38px; }
+body.demo-mode .loading-overlay { top: 38px !important; }
+

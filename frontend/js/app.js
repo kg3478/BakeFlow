@@ -2584,18 +2584,56 @@ function backToSignin() {
   document.getElementById('auth-overlay').style.display = 'flex';
 }
 
-// ── Demo Login ───────────────────────────────────────────────
-async function loginDemo() {
-  const btn = document.getElementById('demo-login-btn');
-  if (btn) { btn.disabled = true; btn.innerHTML = '<span>⏳</span><span>Loading demo…</span>'; }
+// ── Demo Login (password-modal flow) ─────────────────────────
+
+function showDemoModal() {
+  document.getElementById('auth-overlay').style.display = 'none';
+  const m = document.getElementById('demo-modal');
+  m.classList.remove('hidden');
+  m.style.display = 'flex';
+  const inp = document.getElementById('demo-password-input');
+  if (inp) { inp.value = ''; inp.focus(); }
+  const errEl = document.getElementById('demo-error');
+  if (errEl) errEl.style.display = 'none';
+}
+
+function closeDemoModal() {
+  const m = document.getElementById('demo-modal');
+  m.classList.add('hidden');
+  m.style.display = 'none';
+  document.getElementById('auth-overlay').style.display = 'flex';
+}
+
+function toggleDemoPassVis() {
+  const inp = document.getElementById('demo-password-input');
+  const icon = document.getElementById('demo-eye-icon');
+  if (!inp) return;
+  if (inp.type === 'password') { inp.type = 'text'; if (icon) icon.className = 'ti ti-eye-off'; }
+  else { inp.type = 'password'; if (icon) icon.className = 'ti ti-eye'; }
+}
+
+async function submitDemoLogin() {
+  const password = (document.getElementById('demo-password-input').value || '').trim();
+  const errEl = document.getElementById('demo-error');
+  const btn = document.getElementById('demo-submit-btn');
+
+  if (!password) {
+    errEl.textContent = 'Please enter the demo password.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  errEl.style.display = 'none';
+  if (btn) { btn.disabled = true; btn.textContent = 'Entering demo…'; }
+
   try {
     const res = await fetch('/api/auth/demo', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: 'demo1234' })
+      body: JSON.stringify({ password })
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Demo login failed');
+    if (!res.ok) throw new Error(data.error || 'Incorrect demo password');
 
     const session = {
       name: data.user.name || 'Demo User',
@@ -2609,13 +2647,18 @@ async function loginDemo() {
     localStorage.setItem('bakeflow_token', data.token);
     localStorage.setItem('bakeflow_session', JSON.stringify(session));
     currentSession = session;
-    document.getElementById('auth-overlay').style.display = 'none';
+    document.getElementById('demo-modal').style.display = 'none';
+    document.getElementById('demo-modal').classList.add('hidden');
     applySession();
   } catch (err) {
-    if (btn) { btn.disabled = false; btn.innerHTML = '<span style="font-size:18px;">🧁</span><span>Try Demo — No sign-in needed</span>'; }
-    showToast('Demo login failed: ' + err.message, true);
+    errEl.textContent = err.message || 'Incorrect demo password. Please try again.';
+    errEl.style.display = 'block';
+    if (btn) { btn.disabled = false; btn.textContent = 'Enter Demo →'; }
   }
 }
+
+// Keep old name as alias (backward-compat with cached JS)
+function loginDemo() { showDemoModal(); }
 
 async function submitRole() {
   const roleInput = document.querySelector('input[name="role"]:checked');
@@ -2673,15 +2716,14 @@ function applySession() {
   const roleModal = document.getElementById('role-modal');
   if (roleModal) { roleModal.style.display = 'none'; roleModal.classList.add('hidden'); }
 
-  // Demo mode banner
+  // Demo mode banner + body class (fixes sidebar/header overlap)
   const demoBanner = document.getElementById('demo-banner');
   const isDemo = currentSession && (currentSession.isDemo || currentSession.role === 'demo_admin');
+  document.body.classList.toggle('demo-mode', isDemo);
   if (demoBanner) {
     if (isDemo) {
       demoBanner.classList.remove('hidden');
       demoBanner.style.display = 'flex';
-      // Push main content down to account for banner height
-      document.querySelector('.app') && (document.querySelector('.app').style.paddingTop = '42px');
     } else {
       demoBanner.classList.add('hidden');
       demoBanner.style.display = 'none';
@@ -2762,6 +2804,7 @@ function signOut() {
   if (currentSession) {
     try { API.log('LOGOUT', 'Session ended', 'Auth', ''); } catch(e) {}
   }
+  document.body.classList.remove('demo-mode');
   localStorage.removeItem('bakeflow_session');
   localStorage.removeItem('bakeflow_token');
   currentSession = null;

@@ -24,23 +24,46 @@
     <div id="auth-step-signin">
       <div id="g-signin-btn" style="display:flex;justify-content:center;margin:24px 0 8px;"></div>
       <div class="auth-divider"><span>or</span></div>
-      <button id="demo-login-btn" onclick="loginDemo()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;padding:11px 16px;border-radius:8px;border:1.5px dashed var(--bo-gold);background:rgba(196,154,60,0.06);color:var(--bo-gold-dark);font-size:13.5px;font-weight:500;cursor:pointer;transition:all 0.2s;font-family:'DM Sans',sans-serif;margin-bottom:4px;" onmouseover="this.style.background='rgba(196,154,60,0.13)'" onmouseout="this.style.background='rgba(196,154,60,0.06)'">
+      <button id="demo-login-btn" onclick="showDemoModal()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;padding:11px 16px;border-radius:8px;border:1.5px dashed var(--bo-gold);background:rgba(196,154,60,0.06);color:var(--bo-gold-dark);font-size:13.5px;font-weight:500;cursor:pointer;transition:all 0.2s;font-family:'DM Sans',sans-serif;margin-bottom:4px;" onmouseover="this.style.background='rgba(196,154,60,0.13)'" onmouseout="this.style.background='rgba(196,154,60,0.06)'">
         <span style="font-size:18px;">🧁</span>
-        <span>Try Demo — No sign-in needed</span>
+        <span>Try Demo — Full Access</span>
       </button>
-      <div style="font-size:11px;color:var(--bo-muted);text-align:center;margin-top:6px;letter-spacing:0.3px;">Explore all features with sample bakery data</div>
+      <div style="font-size:11px;color:var(--bo-muted);text-align:center;margin-top:6px;letter-spacing:0.3px;">All features unlocked · Data resets each session · Password required</div>
     </div>
   </div>
 </div>
 
-<!-- ── Demo Mode Banner ──────────────────────────────────────── -->
-<div id="demo-banner" class="hidden" style="position:fixed;top:0;left:0;right:0;z-index:10000;background:linear-gradient(135deg,#8B6914,#C49A3C);color:#fff;padding:8px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-family:'DM Sans',sans-serif;font-size:13px;box-shadow:0 2px 12px rgba(0,0,0,0.25);">
-  <div style="display:flex;align-items:center;gap:10px;">
-    <span style="font-size:16px;">🧁</span>
-    <span><strong>DEMO MODE</strong> — You are exploring BakeFlow with sample bakery data.</span>
-    <span style="background:rgba(0,0,0,0.2);padding:2px 8px;border-radius:100px;font-size:11px;font-weight:500;letter-spacing:0.5px;">READ-ONLY WRITES DISABLED</span>
+<!-- ── Demo Password Modal ──────────────────────────────────── -->
+<div id="demo-modal" class="auth-overlay hidden">
+  <div class="auth-card" style="max-width:380px;">
+    <div style="font-size:36px;margin-bottom:10px;">🧁</div>
+    <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:var(--bo-brown);margin-bottom:4px;">Demo Access</div>
+    <div style="font-size:12px;color:var(--bo-muted);margin-bottom:4px;letter-spacing:0.3px;">Enter the demo password to explore BakeFlow with full access.</div>
+    <div style="background:rgba(196,154,60,0.08);border:1px solid rgba(196,154,60,0.25);border-radius:8px;padding:10px 14px;margin:14px 0;text-align:left;font-size:12px;color:var(--bo-muted);line-height:1.6;">
+      ✅ All features fully accessible<br>
+      ✅ Pre-loaded with sample bakery data<br>
+      🔄 Data resets fresh on each new login
+    </div>
+    <div class="form-group" style="text-align:left;">
+      <label class="form-label">Demo Password</label>
+      <div style="position:relative;">
+        <input type="password" id="demo-password-input" placeholder="Enter demo password…" onkeydown="if(event.key==='Enter')submitDemoLogin();" style="padding-right:40px;">
+        <button onclick="toggleDemoPassVis()" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--bo-muted);"><i class="ti ti-eye" id="demo-eye-icon"></i></button>
+      </div>
+    </div>
+    <div id="demo-error" style="color:var(--bo-danger);font-size:12px;margin-bottom:10px;display:none;"></div>
+    <button id="demo-submit-btn" class="btn btn-gold" style="width:100%;justify-content:center;" onclick="submitDemoLogin()">Enter Demo →</button>
+    <button class="btn btn-sm" style="width:100%;justify-content:center;margin-top:8px;" onclick="closeDemoModal()">← Back to Sign In</button>
   </div>
-  <button onclick="signOut()" style="background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.4);color:#fff;padding:5px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:500;font-family:'DM Sans',sans-serif;white-space:nowrap;">Exit Demo</button>
+</div>
+
+<!-- ── Demo Mode Banner ──────────────────────────────────────── -->
+<div id="demo-banner" class="hidden" style="position:fixed;top:0;left:0;right:0;z-index:10000;background:linear-gradient(90deg,#7a5510,#C49A3C,#7a5510);color:#fff;padding:7px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-family:'DM Sans',sans-serif;font-size:12.5px;box-shadow:0 2px 12px rgba(0,0,0,0.3);">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span style="font-size:15px;">🧁</span>
+    <span><strong>DEMO MODE</strong> — Full access · Sample data · <em>Resets on each new login</em></span>
+  </div>
+  <button onclick="signOut()" style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.5);color:#fff;padding:4px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;white-space:nowrap;flex-shrink:0;">Exit Demo ×</button>
 </div>
 
 <!-- ── Role Modal ────────────────────────────────────────────── -->

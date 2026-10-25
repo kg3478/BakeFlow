@@ -357,9 +357,74 @@ class SheetsClient {
         await this.prisma.setting.create({ data: { key: 'overhead', tenantId: demoTenantId, value: DEFAULT_OVERHEAD } });
       }
 
+      // Seed sample customers
+      const custCount = await this.prisma.customer.count({ where: { tenantId: demoTenantId } });
+      if (custCount === 0) {
+        const demoCustomers = [
+          { id: 'demo-cust-1', name: 'Priya Sharma', phone: '9876543210', email: 'priya@example.com', address: '12, MG Road, Pune', notes: 'Prefers eggless cakes', totalOrders: 5, totalValue: 4250 },
+          { id: 'demo-cust-2', name: 'Rohan Mehta', phone: '9812345678', email: 'rohan@example.com', address: '45, Linking Road, Mumbai', notes: '', totalOrders: 3, totalValue: 2800 },
+          { id: 'demo-cust-3', name: 'Ananya Gupta', phone: '9998877665', email: 'ananya@example.com', address: '7, Civil Lines, Delhi', notes: 'Allergic to nuts', totalOrders: 8, totalValue: 6900 },
+        ];
+        for (const c of demoCustomers) {
+          await this.prisma.customer.create({ data: { ...c, tenantId: demoTenantId } });
+        }
+      }
+
+      // Seed sample sales invoices
+      const saleCount = await this.prisma.salesInvoice.count({ where: { tenantId: demoTenantId } });
+      if (saleCount === 0) {
+        const today = new Date().toLocaleDateString('en-IN');
+        await this.prisma.salesInvoice.create({
+          data: {
+            id: 'demo-sale-1', tenantId: demoTenantId,
+            invoiceNumber: 9001,
+            customerName: 'Priya Sharma', customerPhone: '9876543210',
+            items: [{ name: 'Rasmalai Cake (1kg)', qty: 1, rate: 950, amount: 950 }, { name: 'Cake Box 1kg', qty: 1, rate: 45, amount: 45 }],
+            subtotal: 995, discountAmt: 50, gstPct: 0, gstAmt: 0, totalAmount: 945,
+            paymentMethod: 'UPI', notes: 'Anniversary cake', date: today,
+            inventoryDeducted: false, whatsappSent: false
+          }
+        });
+        await this.prisma.salesInvoice.create({
+          data: {
+            id: 'demo-sale-2', tenantId: demoTenantId,
+            invoiceNumber: 9002,
+            customerName: 'Ananya Gupta', customerPhone: '9998877665',
+            items: [{ name: 'Fudgy Brownie Box (8pc)', qty: 2, rate: 499, amount: 998 }, { name: 'Message Card', qty: 2, rate: 5, amount: 10 }],
+            subtotal: 1008, discountAmt: 0, gstPct: 0, gstAmt: 0, totalAmount: 1008,
+            paymentMethod: 'Cash', notes: '', date: today,
+            inventoryDeducted: false, whatsappSent: false
+          }
+        });
+      }
+
       console.log('  ✅ Demo tenant seeded.');
     } catch (err) {
       console.warn('[Demo Seed] Failed:', err.message);
+    }
+  }
+
+
+  // Reset demo tenant — wipe all data and re-seed fresh defaults
+  // Called on every new demo login so each session starts clean
+  async _resetAndSeedDemoTenant(demoTenantId) {
+    try {
+      console.log('🔄 Resetting demo tenant data...');
+      // Delete in order of FK dependencies
+      await this.prisma.auditLog.deleteMany({ where: { tenantId: demoTenantId } });
+      await this.prisma.salesInvoice.deleteMany({ where: { tenantId: demoTenantId } });
+      await this.prisma.customer.deleteMany({ where: { tenantId: demoTenantId } });
+      await this.prisma.order.deleteMany({ where: { tenantId: demoTenantId } });
+      await this.prisma.product.deleteMany({ where: { tenantId: demoTenantId } });
+      await this.prisma.packaging.deleteMany({ where: { tenantId: demoTenantId } });
+      await this.prisma.ingredient.deleteMany({ where: { tenantId: demoTenantId } });
+      await this.prisma.setting.deleteMany({ where: { tenantId: demoTenantId } });
+      console.log('  🗑️  Demo data cleared. Re-seeding...');
+      await this._seedDemoTenant(demoTenantId);
+    } catch (err) {
+      console.warn('[Demo Reset] Failed:', err.message);
+      // Fall back to seed only (don't crash login on reset failure)
+      await this._seedDemoTenant(demoTenantId);
     }
   }
 
