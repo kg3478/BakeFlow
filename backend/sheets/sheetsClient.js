@@ -398,6 +398,64 @@ class SheetsClient {
         });
       }
 
+      // Seed sample orders
+      const orderCount = await this.prisma.order.count({ where: { tenantId: demoTenantId } });
+      if (orderCount === 0) {
+        const today = new Date().toLocaleDateString('en-IN');
+        await this.prisma.order.create({
+          data: {
+            id: 'demo-order-1',
+            tenantId: demoTenantId,
+            name: 'Belgian Truffle Birthday Cake (1kg)',
+            category: 'cake',
+            date: today,
+            timestamp: Date.now() - 3600000 * 2,
+            orderData: {
+              id: 'demo-order-1',
+              name: 'Belgian Truffle Birthday Cake (1kg)',
+              category: 'cake',
+              date: today,
+              timestamp: Date.now() - 3600000 * 2,
+              summary: { totalCost: 460, sellingPrice: 950, profitPct: 51.6 }
+            }
+          }
+        });
+        await this.prisma.order.create({
+          data: {
+            id: 'demo-order-2',
+            tenantId: demoTenantId,
+            name: 'Lotus Biscoff Cheesecake (500g)',
+            category: 'fusion-cake',
+            date: today,
+            timestamp: Date.now() - 3600000 * 6,
+            orderData: {
+              id: 'demo-order-2',
+              name: 'Lotus Biscoff Cheesecake (500g)',
+              category: 'fusion-cake',
+              date: today,
+              timestamp: Date.now() - 3600000 * 6,
+              summary: { totalCost: 380, sellingPrice: 750, profitPct: 49.3 }
+            }
+          }
+        });
+      }
+
+      // Seed sample staff member
+      const userCount = await this.prisma.user.count({ where: { tenantId: demoTenantId } });
+      if (userCount === 0) {
+        await this.prisma.user.create({
+          data: {
+            id: 'demo-user-1',
+            tenantId: demoTenantId,
+            name: 'Chef Rahul',
+            username: 'chef_rahul',
+            role: 'employee',
+            authMethod: 'password',
+            active: true
+          }
+        });
+      }
+
       console.log('  ✅ Demo tenant seeded.');
     } catch (err) {
       console.warn('[Demo Seed] Failed:', err.message);
@@ -411,6 +469,8 @@ class SheetsClient {
     try {
       console.log('🔄 Resetting demo tenant data...');
       // Delete in order of FK dependencies
+      try { await this.prisma.userSession.deleteMany({ where: { user: { tenantId: demoTenantId } } }); } catch(e) {}
+      try { await this.prisma.user.deleteMany({ where: { tenantId: demoTenantId } }); } catch(e) {}
       await this.prisma.auditLog.deleteMany({ where: { tenantId: demoTenantId } });
       await this.prisma.salesInvoice.deleteMany({ where: { tenantId: demoTenantId } });
       await this.prisma.customer.deleteMany({ where: { tenantId: demoTenantId } });

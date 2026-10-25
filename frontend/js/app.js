@@ -492,11 +492,12 @@ function navigate(page) {
   // Redirect legacy separate pages to merged materials page
   if (page === 'ingredients' || page === 'packaging') page = 'materials';
 
-  // Admin-only page guard
+  // Admin-only page guard (demo users have full access to explore)
   const adminOnlyPages = ['labour', 'overheads', 'reports', 'salesreports', 'auditlog'];
   if (adminOnlyPages.includes(page) && currentSession) {
     const r = currentSession.role;
-    if (r !== 'admin' && r !== 'owner' && r !== 'platform_admin') {
+    const isDemo = currentSession.isDemo || r === 'demo_admin';
+    if (!isDemo && r !== 'admin' && r !== 'owner' && r !== 'platform_admin') {
       showToast('⛔ Admin access required', true);
       return;
     }
@@ -2866,8 +2867,15 @@ async function loadDashboardData() {
     riEl.innerHTML = '<div style="color:var(--bo-muted);font-size:13px;">No invoices yet.</div>';
   }
 
-  // Admin stats
-  if (currentSession && currentSession.role === 'admin') {
+  // Admin & demo stats
+  const canViewStats = currentSession && (
+    currentSession.role === 'admin' ||
+    currentSession.role === 'owner' ||
+    currentSession.role === 'platform_admin' ||
+    currentSession.role === 'demo_admin' ||
+    currentSession.isDemo
+  );
+  if (canViewStats) {
     const monthNow = new Date().getMonth();
     const yearNow = new Date().getFullYear();
     const monthRevenue = salesInvoices

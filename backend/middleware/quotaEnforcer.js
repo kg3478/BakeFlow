@@ -8,7 +8,7 @@ const PLAN_LIMITS = {
 
 async function enforceQuota(req, res, next) {
   const tenantId = req.user?.tenantId;
-  if (!tenantId) return next();
+  if (!tenantId || req.user?.isDemo || req.user?.role === 'demo_admin') return next();
 
   const path = req.baseUrl + req.path; // e.g. /api/invoice/scan or /api/sales/:id/whatsapp
 

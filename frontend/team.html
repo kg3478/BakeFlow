@@ -378,7 +378,7 @@
     // ── Auth helpers ─────────────────────────────────────
     const token = localStorage.getItem('bakeflow_token');
     const sess = JSON.parse(localStorage.getItem('bakeflow_session') || '{}');
-    const hasAccess = token && (sess.role === 'admin' || sess.role === 'owner' || sess.role === 'platform_admin');
+    const hasAccess = token && (sess.role === 'admin' || sess.role === 'owner' || sess.role === 'platform_admin' || sess.role === 'demo_admin' || sess.isDemo);
     if (!hasAccess) { window.location.href = '/'; }
 
     const api = (path, opts = {}) =>
