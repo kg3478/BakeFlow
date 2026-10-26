@@ -69,11 +69,11 @@ router.post('/scan', enforceQuota, async (req, res) => {
 
     // Top verified multimodal models currently active in Google Generative AI
     const verifiedWorkingModels = [
+      'gemini-1.5-flash',
+      'gemini-1.5-flash-8b',
+      'gemini-2.0-flash',
       'gemini-flash-latest',
-      'gemini-3.8-flash',
-      'gemini-3.5-flash',
-      'gemini-2.5-flash-image',
-      'gemini-3.1-flash-image',
+      'gemini-1.5-pro',
       'gemini-pro-latest'
     ];
     for (const m of verifiedWorkingModels) {
@@ -141,14 +141,28 @@ Return ONLY the JSON array with no explanation, no markdown, no extra text.`;
             cleanMessage = errText || cleanMessage;
           }
 
-          // If model is retired (404), deprecated, or modality not supported (400), try next candidate
-          if (response.status === 404 || cleanMessage.includes('modality') || cleanMessage.includes('no longer available')) {
-            console.warn(`[invoice scan] Model '${model}' skipped: ${cleanMessage}. Trying next model...`);
+          // If model is retired (404), deprecated, modality not supported (400),
+          // OR experiencing high demand / capacity spikes (503 / 429), fall back to next model!
+          const isCapacityOrTransient =
+            response.status === 503 ||
+            response.status === 429 ||
+            cleanMessage.toLowerCase().includes('high demand') ||
+            cleanMessage.toLowerCase().includes('overloaded') ||
+            cleanMessage.toLowerCase().includes('temporarily') ||
+            cleanMessage.toLowerCase().includes('resource_exhausted');
+
+          const isModelIncompatible =
+            response.status === 404 ||
+            cleanMessage.includes('modality') ||
+            cleanMessage.includes('no longer available');
+
+          if (isModelIncompatible || isCapacityOrTransient) {
+            console.warn(`[invoice scan] Model '${model}' failed (${response.status}: ${cleanMessage}). Falling back to next candidate model...`);
             lastError = new Error(cleanMessage);
             continue;
           }
 
-          // For quota/auth/client errors, don't keep retrying models
+          // For permanent auth/client errors (e.g. invalid API key 403), stop retrying
           throw new Error(cleanMessage);
         }
 
@@ -179,7 +193,9 @@ Return ONLY the JSON array with no explanation, no markdown, no extra text.`;
         break;
       } catch (err) {
         lastError = err;
-        if (err.message && err.message.includes('404')) {
+        const msg = err.message || '';
+        // If error is 404, high demand, or fetch network error, continue fallback
+        if (msg.includes('404') || msg.toLowerCase().includes('high demand') || msg.toLowerCase().includes('overloaded') || msg.includes('503') || msg.includes('429')) {
           continue;
         }
         throw err;
